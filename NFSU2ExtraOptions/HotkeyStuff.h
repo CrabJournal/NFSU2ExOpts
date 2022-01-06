@@ -101,21 +101,18 @@ void Thing()
 
 	if ((GetAsyncKeyState(hotkeyUnlockAllThings) & 1) && IsOnFocus) // Unlock All Things
 	{
-		CIniReader iniReader("NFSU2ExtraOptionsSettings.ini");
-		UnlockAllThings = !UnlockAllThings;
-		iniReader.WriteInteger("Gameplay", "UnlockAllThings", UnlockAllThings);
-
-		if (UnlockAllThings)
-		{
-			injector::WriteMemory<unsigned char>(_UnlockAllThings, 1, true);
-			injector::MakeNOP(0x50F0D8, 2, true); // Fix individual performance parts
+		static BOOL isCameraFrozen = FALSE;
+		static const int call_near_size = 5;
+		static BYTE call_backup[call_near_size]; // in case of someone already placed hook there
+		static void* const call_SetCameraMatrix = (void*)0x453BF3;
+		if (isCameraFrozen) {
+			injector::WriteMemoryRaw(call_SetCameraMatrix, call_backup, call_near_size, true);
 		}
-
-		else
-		{
-			injector::WriteMemory<unsigned char>(_UnlockAllThings, 0, true);
-			injector::WriteMemory<WORD>(0x50F0D8, 0x1675, true); // Fix individual performance parts
+		else {
+			memcpy(call_backup, call_SetCameraMatrix, call_near_size);
+			injector::MakeNOP(call_SetCameraMatrix, call_near_size);
 		}
+		isCameraFrozen ^= 1; // isCameraFrozen = !isCameraFrozen
 	}
 
 	// Headlights
